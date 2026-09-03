@@ -1,5 +1,8 @@
-815654d229da73cba76f56c1453dd0dc44a72ff80baf3493f390e1d40fee0fb3  docs\THEORETICAL_CLAIM.md
-144af7de5ad7f5a74ccc43f275ff4aee54f07795d9cdeffaf4f28ae024c28869  reference\av3_vpu_testbench.cpp
-aaaf3d80c7dad64f4f561dd7818ddc0c386d5dc0125eb79df9a580552f1a8218  web\index.html
-98f1fd0bce37401eb8e1ed48d595134a0aa72de34a81a73b44fbe92e445c269f  web\visualizer.js
-be17139c5952752a61f863640dd6a4b96feb1e5098feb62ada07f2ed062970b0  av3_testbench.exe
+
+Algorithm Hash                                                             Path                                     
+--------- ----                                                             ----                                     
+SHA256    D54A4044FE0170984B710D879AA2B333B91ADAF834350573338723EE3EE9071F D:\workspace\av3-ao3-codec\SPEC.md       
+SHA256    897570BE5A548E040E98881366980596F4201F21B26CE3604BDB7AE148E3AE30 D:\workspace\av3-ao3-codec\ao3_codec.py  
+SHA256    FAD4C4293E254148F5FC87AD0C5A942A29B06008229E9790E9851C796D04A005 D:\workspace\av3-ao3-codec\stage_repo.ps1
+
+
