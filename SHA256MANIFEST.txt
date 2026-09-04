@@ -1,9 +1,3 @@
-﻿
-Algorithm Hash                                                             Path          
---------- ----                                                             ----          
-SHA256    9C887E92263E803D360AF8E0EC8E60CCE4B232594E59783E35F41D397D859590 SPEC.md       
-SHA256    449949592BEF63FE848F327A0DA161E07BA12D88625739CB3DBD4346E33B9627 ao3_codec.py  
-SHA256    010E19DF3FA49E956F311E2C6129161E243CF8C4652E91F679A29B22C0D6CF2D stage_repo.ps1
-
-
-
+e8172ac9a3d5f20298ed83d5bd072c4fb6fe148b729c7c5e2b53f6f7fc333c6e  SPEC.md
+f3ec498af2f152aec1d7c01393ec7616159d30fce06e918a400002f2e3846ed8  ao3_codec.py
+3ac744098ea55927505f408cf0fe6e2aa881458d42afe362b06938da8f30ff5d  stage_repo.ps1

@@ -1,8 +1,8 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 AO3 Transport-Core Reference Codec (v1.0.2)
 RFC 8785 JCS + RFC 4648 S5 Base64URL + SHA-256
-Patch v1.0.2: recursive validation, negative test suite, bounded depth.
+Patch v1.0.2: recursive validation, 8-test suite, no-BOM output.
 """
 import base64, hashlib, json, re, sys
 
@@ -11,30 +11,23 @@ B64URL_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
 def validate_payload(item, depth: int = 0, max_depth: int = 8):
     if depth > max_depth:
         raise ValueError(f"Payload exceeds maximum nesting depth of {max_depth}")
-    if isinstance(item, bool):
-        return
-    if isinstance(item, int):
-        raise TypeError("Integers are deferred to v1.1+")
-    if isinstance(item, float):
-        raise TypeError("Floats are out of scope for AO3 v1.0")
-    if isinstance(item, (str, type(None))):
-        return
+    if isinstance(item, bool): return
+    if isinstance(item, int):   raise TypeError("Integers deferred to v1.1+")
+    if isinstance(item, float): raise TypeError("Floats out of scope for AO3 v1.0")
+    if isinstance(item, (str, type(None))): return
     if isinstance(item, dict):
         for k, v in item.items():
-            if not isinstance(k, str):
-                raise TypeError("Object keys must be strings")
-            if any(ord(c) > 0xFFFF for c in k):
-                raise ValueError("Non-BMP keys are deferred to v1.1+")
+            if not isinstance(k, str): raise TypeError("Keys must be strings")
+            if any(ord(c) > 0xFFFF for c in k): raise ValueError("Non-BMP keys deferred to v1.1+")
             validate_payload(v, depth + 1, max_depth)
     elif isinstance(item, list):
-        for elem in item:
-            validate_payload(elem, depth + 1, max_depth)
+        for elem in item: validate_payload(elem, depth + 1, max_depth)
     else:
-        raise TypeError(f"Unsupported payload type: {type(item).__name__}")
+        raise TypeError(f"Unsupported type: {type(item).__name__}")
 
 def canonicalize(obj) -> bytes:
     validate_payload(obj)
-    return json.dumps(obj, sort_keys=True, separators=(',',':'), ensure_ascii=False).encode('utf-8')
+    return json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
 
 def encode_carrier(canonical_bytes: bytes) -> str:
     return base64.urlsafe_b64encode(canonical_bytes).decode('ascii').rstrip('=')
@@ -70,8 +63,7 @@ def verify_envelope(envelope: dict) -> bool:
     carrier    = envelope.get("carrier", "")
     declared_h = envelope.get("H", "")
     declared_l = envelope.get("L", -1)
-    if len(carrier) != declared_l:
-        return False
+    if len(carrier) != declared_l: return False
     try:
         canonical_bytes = decode_carrier(carrier)
     except ValueError:
@@ -79,51 +71,75 @@ def verify_envelope(envelope: dict) -> bool:
     return compute_digest(canonical_bytes) == declared_h
 
 def run_self_test() -> bool:
-    # 1. S4 positive fixture
-    fixture = {"anchor":"AJX_CAPTAIN","c3":"NULL_UNWRITTEN","clock":"COLD_SHELF","test":"S4_PARITY_FIXTURE_001"}
+    all_pass = True
+
+    # T1: S4 positive parity fixture
+    fixture  = {"anchor": "AJX_CAPTAIN", "c3": "NULL_UNWRITTEN",
+                "clock": "COLD_SHELF", "test": "S4_PARITY_FIXTURE_001"}
     target_h = "2f9a5916cbf1fe643b2e8718556d9bea01ab55ef81ba330ef52bb0d7d4a8894d"
     env = build_envelope(fixture)
-    if not (env["bytes"]==98 and env["L"]==131 and env["H"]==target_h and verify_envelope(env)):
-        print("FAIL: S4 parity"); return False
-    print("[+] S4 PARITY: PASS")
+    if env["bytes"]==98 and env["L"]==131 and env["H"]==target_h and verify_envelope(env):
+        print("[+] T1 S4_PARITY: PASS")
+    else:
+        print("[-] T1 S4_PARITY: FAIL"); all_pass = False
 
-    # 2. Nested object support (Option B)
-    nested = {"anchor":"AJX_CAPTAIN","directive":{"assigned":["CPLX","GRKX"],"active":True}}
+    # T2: Positive nested roundtrip (PPLX requirement)
+    nested = {"directive": {"assigned": ["CPLX", "GRKX"], "enabled": True}, "meta": None}
     nenv = build_envelope(nested)
-    if not verify_envelope(nenv):
-        print("FAIL: nested object"); return False
-    print("[+] NESTED OBJECT: PASS")
+    if verify_envelope(nenv):
+        print("[+] T2 NESTED_ROUNDTRIP: PASS")
+    else:
+        print("[-] T2 NESTED_ROUNDTRIP: FAIL"); all_pass = False
 
-    # 3. Negative: nested int
+    # T3: Negative — empty carrier (PPLX requirement)
     try:
-        build_envelope({"data":{"count":42}}); print("FAIL: nested int not rejected"); return False
-    except TypeError: print("[+] NESTED INT REJECTION: PASS")
+        decode_carrier("")
+        print("[-] T3 EMPTY_CARRIER: FAIL"); all_pass = False
+    except ValueError:
+        print("[+] T3 EMPTY_CARRIER: PASS")
 
-    # 4. Negative: non-BMP key
+    # T4: Negative — nested int
     try:
-        build_envelope({"key_\U0001F600":"value"}); print("FAIL: non-BMP not rejected"); return False
-    except ValueError: print("[+] NON-BMP KEY REJECTION: PASS")
+        build_envelope({"data": {"count": 42}})
+        print("[-] T4 NESTED_INT: FAIL"); all_pass = False
+    except TypeError:
+        print("[+] T4 NESTED_INT: PASS")
 
-    # 5. Negative: whitespace in carrier
+    # T5: Negative — non-BMP key
     try:
-        decode_carrier(" " + env["carrier"]); print("FAIL: whitespace not rejected"); return False
-    except ValueError: print("[+] WHITESPACE REJECTION: PASS")
+        build_envelope({"key_\U0001F600": "val"})
+        print("[-] T5 NON_BMP_KEY: FAIL"); all_pass = False
+    except ValueError:
+        print("[+] T5 NON_BMP_KEY: PASS")
 
-    # 6. Negative: padding
+    # T6: Negative — whitespace in carrier
     try:
-        decode_carrier(env["carrier"] + "="); print("FAIL: padding not rejected"); return False
-    except ValueError: print("[+] PADDING REJECTION: PASS")
+        decode_carrier(" " + env["carrier"])
+        print("[-] T6 WHITESPACE: FAIL"); all_pass = False
+    except ValueError:
+        print("[+] T6 WHITESPACE: PASS")
 
-    # 7. Negative: invalid alphabet
+    # T7: Negative — padding character
     try:
-        bad = env["carrier"].replace("-","+")
-        if bad != env["carrier"]:
-            decode_carrier(bad); print("FAIL: bad char not rejected"); return False
-    except ValueError: pass
-    print("[+] ALPHABET REJECTION: PASS")
+        decode_carrier(env["carrier"] + "=")
+        print("[-] T7 PADDING: FAIL"); all_pass = False
+    except ValueError:
+        print("[+] T7 PADDING: PASS")
 
-    print(); print("ALL_GUARDS_AND_NEGATIVE_TESTS_PASS")
-    return True
+    # T8: Negative — invalid Base64URL alphabet ('+' is standard b64 but not URL-safe)
+    # Use a hardcoded string containing '+' — guaranteed to trigger alphabet guard
+    try:
+        decode_carrier("eyJhbmNob3IiOiJBSlhfQ0FQVEFJTiIs+mMzIjoiTlVMTF9VTldSSVRURU4i")
+        print("[-] T8 ALPHABET: FAIL"); all_pass = False
+    except ValueError:
+        print("[+] T8 ALPHABET: PASS")
+
+    print()
+    if all_pass:
+        print("AO3_V102_ALL_TESTS_PASS")
+    else:
+        print("FAIL: one or more tests failed")
+    return all_pass
 
 if __name__ == "__main__":
     sys.exit(0 if run_self_test() else 1)
