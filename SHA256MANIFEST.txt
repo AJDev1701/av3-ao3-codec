@@ -1,8 +1,9 @@
+﻿
+Algorithm Hash                                                             Path          
+--------- ----                                                             ----          
+SHA256    9C887E92263E803D360AF8E0EC8E60CCE4B232594E59783E35F41D397D859590 SPEC.md       
+SHA256    449949592BEF63FE848F327A0DA161E07BA12D88625739CB3DBD4346E33B9627 ao3_codec.py  
+SHA256    010E19DF3FA49E956F311E2C6129161E243CF8C4652E91F679A29B22C0D6CF2D stage_repo.ps1
 
-Algorithm Hash                                                             Path                                     
---------- ----                                                             ----                                     
-SHA256    CF2B09B7F9496CCBF94F13323BC39E8419362BDAC5DB50C6D8B3F0381911D3B9 D:\workspace\av3-ao3-codec\SPEC.md       
-SHA256    73D8229CFA5BCA32B95F95758FE58A95E054E0515A8C839609E0B073F381030F D:\workspace\av3-ao3-codec\ao3_codec.py  
-SHA256    FAD4C4293E254148F5FC87AD0C5A942A29B06008229E9790E9851C796D04A005 D:\workspace\av3-ao3-codec\stage_repo.ps1
 
 
